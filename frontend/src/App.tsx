@@ -1,13 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { Activity, Building2, CheckCircle2, FileSpreadsheet, LayoutDashboard, LogOut, Package, RefreshCw, User as UserIcon, Users, XCircle } from 'lucide-react';
+import {
+  Activity,
+  FileSpreadsheet,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  Settings,
+  User as UserIcon,
+  Users,
+} from 'lucide-react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CustomersPage } from './pages/CustomersPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { ChallansPage } from './pages/ChallansPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { Role } from './types/auth';
 
@@ -15,23 +24,187 @@ const PortalLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activePlaceholder, setActivePlaceholder] = useState('dashboard');
-  const [health, setHealth] = useState<{ status: string; database?: string } | null>(null);
-  const [checkingHealth, setCheckingHealth] = useState(true);
+
   const nav = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[], path: '/dashboard' },
-    { id: 'customers', label: 'Customer CRM', icon: Users, roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[], path: '/customers' },
-    { id: 'products', label: 'Products', icon: Package, roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[], path: '/products' },
-    { id: 'inventory', label: 'Inventory', icon: Activity, roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[], path: '/inventory' },
-    { id: 'challans', label: 'Sales Challans', icon: FileSpreadsheet, roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[], path: '/challans' },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[],
+      path: '/dashboard',
+    },
+    {
+      id: 'customers',
+      label: 'Customer CRM',
+      icon: Users,
+      roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[],
+      path: '/customers',
+    },
+    {
+      id: 'products',
+      label: 'Products',
+      icon: Package,
+      roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[],
+      path: '/products',
+    },
+    {
+      id: 'inventory',
+      label: 'Inventory',
+      icon: Activity,
+      roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[],
+      path: '/inventory',
+    },
+    {
+      id: 'challans',
+      label: 'Sales Challans',
+      icon: FileSpreadsheet,
+      roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] as Role[],
+      path: '/challans',
+    },
   ];
-  const currentId = location.pathname === '/customers' ? 'customers' : location.pathname === '/products' ? 'products' : location.pathname === '/inventory' ? 'inventory' : location.pathname === '/challans' ? 'challans' : activePlaceholder;
-  const checkHealth = async () => { setCheckingHealth(true); try { const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'; const response = await axios.get(`${baseUrl}/health`); setHealth(response.data); } catch { setHealth(null); } finally { setCheckingHealth(false); } };
-  useEffect(() => { checkHealth(); }, []);
-  const title = nav.find((item) => item.id === currentId)?.label || 'Dashboard';
-  return <div className="flex h-screen overflow-hidden bg-slate-950 font-sans text-slate-100"><aside className="flex w-64 flex-col justify-between border-r border-slate-800 bg-slate-900"><div><div className="flex items-center gap-3 border-b border-slate-800 p-5"><div className="rounded-xl bg-indigo-600 p-2.5"><Building2 className="h-6 w-6" /></div><div><h1 className="text-lg font-bold">Apex ERP</h1><span className="text-xs text-indigo-400">Wholesale Ops Portal</span></div></div><div className="m-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3"><UserIcon className="h-4 w-4 text-indigo-400" /><div className="min-w-0"><p className="truncate text-xs font-semibold">{user?.name}</p><p className="text-[10px] font-medium text-indigo-400">{user?.role}</p></div></div><nav className="space-y-1 p-3">{nav.filter((item) => user && item.roles.includes(user.role)).map((item) => { const Icon = item.icon; const active = currentId === item.id; return <button key={item.id} onClick={() => item.path ? navigate(item.path) : setActivePlaceholder(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium ${active ? 'border border-indigo-500/30 bg-indigo-600/15 text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav></div><div className="border-t border-slate-800 p-3"><button onClick={() => { logout(); navigate('/login'); }} className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/20 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10"><LogOut className="h-3.5 w-3.5" />Sign Out</button></div></aside><main className="flex-1 overflow-y-auto"><header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-6 backdrop-blur"><div><h2 className="text-base font-semibold">{title}</h2><p className="text-xs text-slate-500">Role: {user?.role}</p></div><button onClick={checkHealth} disabled={checkingHealth} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${checkingHealth ? 'animate-spin' : ''}`} />Check System Health</button></header>{location.pathname === '/customers' ? <CustomersPage /> : location.pathname === '/products' ? <ProductsPage /> : location.pathname === '/inventory' ? <InventoryPage /> : location.pathname === '/challans' ? <ChallansPage /> : <Dashboard health={health} checking={checkingHealth} active={currentId} />}</main></div>;
+
+  const currentId =
+    location.pathname === '/customers'
+      ? 'customers'
+      : location.pathname === '/products'
+      ? 'products'
+      : location.pathname === '/inventory'
+      ? 'inventory'
+      : location.pathname === '/challans'
+      ? 'challans'
+      : 'dashboard';
+
+  const currentNav = nav.find((item) => item.id === currentId);
+  const title = currentNav?.label || 'Dashboard';
+  const subtitle =
+    currentId === 'dashboard'
+      ? 'Operations overview'
+      : currentId === 'customers'
+      ? 'Customer management & leads'
+      : currentId === 'products'
+      ? 'Product catalog & stock'
+      : currentId === 'inventory'
+      ? 'Stock movements & history'
+      : 'Delivery dispatches & orders';
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-[#F7F7F5] font-sans text-[#252525] selection:bg-[#2F3437] selection:text-white">
+      {/* Sidebar */}
+      <aside className="flex w-60 flex-col justify-between bg-white border-r border-[#E5E5E2] text-[#252525]">
+        <div>
+          {/* Logo Branding */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E5E5E2]">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-[#2F3437] text-xs font-bold text-white shadow-2xs">
+              A
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-[#252525] tracking-tight leading-tight">Apex ERP</h1>
+              <p className="text-[11px] text-[#6B6B6B] font-normal">Wholesale Operations Workspace</p>
+            </div>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="mt-3 space-y-0.5 px-3">
+            {nav
+              .filter((item) => user && item.roles.includes(user.role))
+              .map((item) => {
+                const Icon = item.icon;
+                const active = currentId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(item.path)}
+                    className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs font-medium transition ${
+                      active
+                        ? 'bg-[#E9ECEB] text-[#252525] font-semibold'
+                        : 'text-[#6B6B6B] hover:bg-[#E9ECEB]/60 hover:text-[#252525]'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 ${active ? 'text-[#2F3437]' : 'text-[#6B6B6B]'}`} />
+                    {item.label}
+                  </button>
+                );
+              })}
+          </nav>
+        </div>
+
+        {/* Bottom Actions & Logout */}
+        <div className="space-y-0.5 p-3 border-t border-[#E5E5E2]">
+          <button className="flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-left text-xs text-[#6B6B6B] hover:bg-[#E9ECEB]/60 hover:text-[#252525]">
+            <Settings className="h-4 w-4" /> Settings
+          </button>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs font-medium text-[#6B6B6B] hover:bg-[#FDF2F2] hover:text-[#B84A4A] transition mt-1"
+          >
+            <LogOut className="h-4 w-4 text-[#B84A4A]" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#F7F7F5]">
+        {/* Top Header */}
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-[#E5E5E2] bg-white px-6 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold text-[#252525]">{title}</h2>
+            <span className="text-[#E5E5E2] font-light">|</span>
+            <span className="text-xs text-[#6B6B6B] font-normal">{subtitle}</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Clean User Badge — Showcase icons like Notification, Refresh, Help removed */}
+            <div className="flex items-center gap-2.5 bg-[#F7F7F5] px-3 py-1 rounded-md border border-[#E5E5E2]">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#E9ECEB] text-[#252525]">
+                <UserIcon className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-semibold text-[#252525]">{user?.name}</span>
+                <span className="rounded bg-[#E9ECEB] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[#6B6B6B]">
+                  {user?.role}
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1">
+          {location.pathname === '/customers' ? (
+            <CustomersPage />
+          ) : location.pathname === '/products' ? (
+            <ProductsPage />
+          ) : location.pathname === '/inventory' ? (
+            <InventoryPage />
+          ) : location.pathname === '/challans' ? (
+            <ChallansPage />
+          ) : (
+            <DashboardPage />
+          )}
+        </div>
+      </main>
+    </div>
+  );
 };
 
-const Dashboard: React.FC<{ health: { status: string; database?: string } | null; checking: boolean; active: string }> = ({ health, checking, active }) => <div className="mx-auto max-w-6xl space-y-6 p-8">{active === 'dashboard' ? <><div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-900/40 to-slate-900 p-6"><h3 className="text-xl font-bold">Operations Portal</h3><p className="mt-2 text-sm text-slate-300">Customer CRM is available from the sidebar. Inventory and Challans remain planned modules.</p></div><div className="rounded-2xl border border-slate-800 bg-slate-900 p-6"><div className="flex items-center gap-3"><Activity className="h-5 w-5 text-indigo-400" /><div><h4 className="font-semibold">Backend & Database Status</h4><p className="text-xs text-slate-400">GET /api/health</p></div></div><div className="mt-5 flex items-center gap-2 text-sm">{checking ? <RefreshCw className="h-4 w-4 animate-spin text-amber-400" /> : health ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-rose-400" />}<span>{checking ? 'Checking...' : health ? `API ${health.status}; database ${health.database || 'connected'}` : 'Backend unavailable'}</span></div></div></> : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center"><h3 className="font-semibold">This module is planned for a later stage.</h3><p className="mt-2 text-sm text-slate-400">Only Customer CRM is implemented in this release.</p></div>}</div>;
-
-export default function App() { return <AuthProvider><BrowserRouter><Routes><Route path="/login" element={<LoginPage />} /><Route element={<ProtectedRoute />}><Route path="/dashboard" element={<PortalLayout />} /><Route path="/customers" element={<PortalLayout />} /><Route path="/products" element={<PortalLayout />} /><Route path="/inventory" element={<PortalLayout />} /><Route path="/challans" element={<PortalLayout />} /></Route><Route path="*" element={<Navigate to="/dashboard" replace />} /></Routes></BrowserRouter></AuthProvider>; }
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<PortalLayout />} />
+            <Route path="/customers" element={<PortalLayout />} />
+            <Route path="/products" element={<PortalLayout />} />
+            <Route path="/inventory" element={<PortalLayout />} />
+            <Route path="/challans" element={<PortalLayout />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
