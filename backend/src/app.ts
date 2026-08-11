@@ -1,12 +1,24 @@
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
+import { env } from './config/env';
 
 const app = express();
 
 // Middleware
-app.use(cors());
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    // Requests made outside a browser (such as local health checks) have no Origin header.
+    if (!origin || env.FRONTEND_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  },
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes

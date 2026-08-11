@@ -96,6 +96,7 @@ model Product {
   sku          String   @unique
   category     String
   unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
+  // Database CHECK constraints enforce non-negative stock values.
   currentStock Int      @default(0) @map("current_stock")
   minimumStock Int      @default(0) @map("minimum_stock")
   warehouse    String
@@ -116,6 +117,7 @@ model Product {
 model StockMovement {
   id        String       @id @default(uuid())
   productId String       @map("product_id")
+  // Database CHECK constraint enforces a positive movement quantity.
   quantity  Int
   type      MovementType
   reason    String
@@ -169,6 +171,7 @@ model ChallanItem {
   productNameSnapshot String  @map("product_name_snapshot")
   skuSnapshot         String  @map("sku_snapshot")
   unitPriceSnapshot   Decimal @map("unit_price_snapshot") @db.Decimal(12, 2)
+  // Database CHECK constraint enforces a positive item quantity.
   quantity            Int
 
   // Relations – Restrict delete to preserve challan history

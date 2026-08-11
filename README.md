@@ -54,6 +54,7 @@ PORT=5000
 NODE_ENV=development
 JWT_SECRET=replace-with-a-long-random-secret
 DATABASE_URL="postgresql://YOUR_USER:YOUR_PASSWORD@localhost:5432/minierp_db?schema=public"
+FRONTEND_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
 ```
 
 ---
@@ -140,3 +141,5 @@ Challan
 | `GET` | `/api/health` | Public | Server health and database connectivity status |
 | `POST` | `/api/auth/login` | Public | User authentication; returns JWT token & profile |
 | `GET` | `/api/auth/me` | Bearer Token | Retrieves current authenticated user details |
+
+Authentication is implemented. Reusable backend RBAC middleware is available and will be applied to protected business endpoints as Customer, Inventory, and Challan modules are added; those business APIs do not exist yet.
