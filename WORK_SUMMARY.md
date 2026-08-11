@@ -17,96 +17,54 @@
 
 ## Step 2 — Database Design, Prisma, Migrations & Seed Data (Complete)
 
-### Files Created / Modified
+- Schema with 6 models (`User`, `Customer`, `Product`, `StockMovement`, `Challan`, `ChallanItem`) and 5 enums.
+- Migration `20260811075146_init_erp_crm_schema` applied.
+- Seed script populating 4 Users, 5 Customers, 8 Products, and 16 Stock Movements.
+- Database health check added to `GET /api/health`.
 
-| File | Action |
-|---|---|
-| `backend/prisma/schema.prisma` | **Created** — Full ERP schema (6 models, 5 enums) |
-| `backend/prisma/seed.ts` | **Created** — Professional seed script with bcrypt |
-| `backend/prisma/migrations/` | **Created** — `init_erp_crm_schema` migration |
-| `backend/src/config/prisma.ts` | **Created** — Singleton PrismaClient |
-| `backend/src/controllers/health.controller.ts` | **Modified** — Added database connectivity check |
-| `backend/src/index.ts` | **Modified** — Added graceful Prisma shutdown |
-| `backend/package.json` | **Modified** — Added Prisma scripts + seed config |
-| `backend/.env.example` | **Modified** — Updated with placeholder format |
-| `README.md` | **Modified** — Added database docs, schema, seed credentials |
+---
 
-### Prisma Models (6)
+## Step 3 — Authentication & Role-Based Access Control (Complete)
 
-| Model | Table | Key Design Decisions |
+### Backend Features Implemented
+1. **JWT Utilities (`src/utils/jwt.ts`)**:
+   - Token signing with 24h expiration and secret key from environment variables.
+   - Token verification and payload extraction.
+2. **Validation Schemas (`src/validations/auth.validation.ts`)**:
+   - Zod validation for login request body (`email`, `password`).
+   - Email normalization to lowercase.
+3. **Authentication & Authorization Middleware (`src/middleware/auth.middleware.ts`)**:
+   - `authenticate`: Extracts Bearer token, verifies JWT, and attaches user to `req.user`.
+   - `authorize(...roles)`: Enforces Role-Based Access Control (RBAC) returning 403 for unauthorized roles.
+4. **Auth Service & Controller (`src/services/auth.service.ts`, `src/controllers/auth.controller.ts`)**:
+   - Password verification using `bcrypt.compare`.
+   - Error handling for invalid credentials (401) and validation errors (400).
+5. **Auth Routes (`src/routes/auth.routes.ts`)**:
+   - `POST /api/auth/login` (Public)
+   - `GET /api/auth/me` (Protected)
+
+### Frontend Features Implemented
+1. **Auth Context & Hook (`src/context/AuthContext.tsx`)**:
+   - Global state managing `user`, `token`, `isAuthenticated`, `loading`.
+   - Automatic session verification on app reload via `GET /api/auth/me`.
+   - `login()` and `logout()` helpers with localStorage persistence.
+2. **Axios API Interceptor (`src/services/api.ts`)**:
+   - Automatic `Authorization: Bearer <token>` header injection.
+   - Global 401 response interceptor for session cleanup.
+3. **Route Guards (`src/components/ProtectedRoute.tsx`)**:
+   - Redirects unauthenticated users to `/login`.
+   - Displays restricted access screen when a role lacks permissions for a specific module.
+4. **Login Interface (`src/pages/LoginPage.tsx`)**:
+   - Modern dark-theme login page.
+   - Quick-fill preset buttons for all 4 role demo accounts (`ADMIN`, `SALES`, `WAREHOUSE`, `ACCOUNTS`).
+
+---
+
+## Verification Summary
+
+| Verification Step | Command / Method | Status |
 |---|---|---|
-| **User** | `users` | UUID PK, email unique, passwordHash stored (never plaintext) |
-| **Customer** | `customers` | Optional email/gstNumber/followUpDate/notes. 5 indexes for search |
-| **Product** | `products` | SKU unique, Decimal(12,2) for unitPrice, integer stock fields |
-| **StockMovement** | `stock_movements` | Positive quantity, type determines IN/OUT, Restrict on delete |
-| **Challan** | `challans` | challanNumber unique, Restrict delete for customer/user FK |
-| **ChallanItem** | `challan_items` | Product snapshot fields, composite unique (challanId + productId) |
-
-### Enums (5)
-
-`Role`, `CustomerType`, `CustomerStatus`, `MovementType`, `ChallanStatus`
-
-### Relationship Summary
-
-```text
-User --> StockMovement (createdBy, onDelete: Restrict)
-User --> Challan (createdBy, onDelete: Restrict)
-Customer --> Challan (customerId, onDelete: Restrict)
-Product --> StockMovement (productId, onDelete: Restrict)
-Product --> ChallanItem (productId, onDelete: Restrict)
-Challan --> ChallanItem (challanId, onDelete: Cascade)
-```
-
-### Important Constraints
-
-- `users.email` — UNIQUE
-- `products.sku` — UNIQUE
-- `challans.challan_number` — UNIQUE
-- `challan_items.(challan_id, product_id)` — COMPOSITE UNIQUE
-- All FK relations use `onDelete: Restrict` except ChallanItem -> Challan (Cascade)
-- Monetary values use `Decimal(12,2)`, never float
-
-### Indexes (19 total)
-
-- **User**: email (unique)
-- **Customer**: name, mobile, businessName, status, customerType
-- **Product**: sku (unique), category, warehouse
-- **StockMovement**: productId, createdBy, createdAt, type
-- **Challan**: challanNumber (unique), customerId, status, createdBy, createdAt
-- **ChallanItem**: challanId, productId, composite unique
-
-### Migration
-
-- Name: `20260811075146_init_erp_crm_schema`
-- Status: Applied successfully
-- Creates 5 enums, 6 tables, 19 indexes, 6 foreign keys
-
-### Seed Data Summary
-
-| Entity | Count | Details |
-|---|---|---|
-| Users | 4 | 1 ADMIN, 1 SALES, 1 WAREHOUSE, 1 ACCOUNTS (bcrypt hashed) |
-| Customers | 5 | 2 WHOLESALE, 2 RETAIL, 1 DISTRIBUTOR. Mix of ACTIVE/LEAD/INACTIVE |
-| Products | 8 | 4 categories. 2 low-stock items (Mustard Oil 8/20, Chana Dal 3/15) |
-| Stock Movements | 16 | 8 IN + 8 OUT. Net movements match product currentStock values |
-| Challans | 0 | None seeded (will be created through challan API in Step 4) |
-
-### Verification Commands Executed
-
-| Command | Result |
-|---|---|
-| `npx prisma format` | Schema formatted |
-| `npx prisma validate` | Schema valid |
-| `npx prisma generate` | Client generated |
-| `npx prisma migrate dev --name init_erp_crm_schema` | Migration applied, seed ran |
-| `npx tsc --noEmit` | TypeScript compiles cleanly |
-| `GET /api/health` | Returns `"database":"connected"` |
-| Verification script | All 4 users, 5 customers, 8 products, 16 movements confirmed |
-
-### Design Decisions for Future Steps
-
-1. **ChallanItem snapshot fields** — When creating a challan, copy `product.name`, `product.sku`, `product.unitPrice` into snapshot fields. Do NOT rely solely on productId for display.
-2. **Stock deduction** — Must be done in a transaction when confirming a challan. Check `currentStock >= requestedQuantity` before deducting.
-3. **Challan numbering** — `challanNumber` is unique but generation logic is not yet implemented. Suggest format like `CH-YYYYMMDD-XXXX`.
-4. **User passwords** — Stored as bcrypt hashes. Login endpoint will need `bcrypt.compare()`.
-5. **Delete protection** — All Restrict FKs mean the app layer should deactivate/archive instead of deleting records with dependencies.
+| Backend TS Check | `npx tsc --noEmit` | Passed with zero errors |
+| Frontend Build | `npm run build` | Passed with zero errors |
+| Login API Test | `POST /api/auth/login` | 200 OK — returns token & user payload |
+| Protected Me Endpoint | `GET /api/auth/me` | 200 OK — returns authenticated user data |

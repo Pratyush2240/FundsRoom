@@ -73,52 +73,34 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
-**Regenerate Prisma Client** (needed if schema changes occur):
+**Regenerate Prisma Client**:
 
 ```bash
 npx prisma generate
 ```
 
-**Reset the database** (drops all data, re-runs migrations and seed):
-
-```bash
-npx prisma migrate reset
-```
-
-**Browse data visually** (opens Prisma Studio in browser):
-
-```bash
-npx prisma studio
-```
-
 ---
 
-### 3. Start the Backend
+### 3. Start Servers
 
+**Backend**:
 ```bash
 cd backend
 npm run dev
 ```
+Runs at `http://localhost:5000`. Health check: `GET /api/health`.
 
-Server runs at `http://localhost:5000`. Health check: `GET /api/health`.
-
----
-
-### 4. Frontend Setup
-
+**Frontend**:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-Frontend runs at `http://localhost:5173`.
+Runs at `http://localhost:5173`.
 
 ---
 
 ## Database Schema
-
-### Entity Relationship Overview
 
 ```text
 User
@@ -135,31 +117,6 @@ Product
 Challan
 └── ChallanItem[]     (challanId -> Challan)
 ```
-
-### Models
-
-| Model | Table | Key Fields |
-|---|---|---|
-| User | `users` | id, name, email (unique), passwordHash, role |
-| Customer | `customers` | id, name, mobile, businessName, customerType, status |
-| Product | `products` | id, name, sku (unique), unitPrice, currentStock, minimumStock |
-| StockMovement | `stock_movements` | id, productId, quantity, type (IN/OUT), reason, createdBy |
-| Challan | `challans` | id, challanNumber (unique), customerId, status, createdBy |
-| ChallanItem | `challan_items` | id, challanId, productId, snapshot fields, quantity |
-
-### Enums
-
-| Enum | Values |
-|---|---|
-| Role | ADMIN, SALES, WAREHOUSE, ACCOUNTS |
-| CustomerType | RETAIL, WHOLESALE, DISTRIBUTOR |
-| CustomerStatus | LEAD, ACTIVE, INACTIVE |
-| MovementType | IN, OUT |
-| ChallanStatus | DRAFT, CONFIRMED, CANCELLED |
-
-### Delete and History Policy
-
-All foreign keys use `onDelete: Restrict` (except ChallanItem -> Challan which uses Cascade). This prevents accidental deletion of historical business records. Application-level deactivation or archiving is preferred over destructive deletion.
 
 ---
 
@@ -178,6 +135,8 @@ All foreign keys use `onDelete: Restrict` (except ChallanItem -> Challan which u
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/health` | Server health and database connectivity status |
+| Method | Endpoint | Protection | Description |
+|---|---|---|---|
+| `GET` | `/api/health` | Public | Server health and database connectivity status |
+| `POST` | `/api/auth/login` | Public | User authentication; returns JWT token & profile |
+| `GET` | `/api/auth/me` | Bearer Token | Retrieves current authenticated user details |
