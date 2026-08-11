@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  SALES
+  WAREHOUSE
+  ACCOUNTS
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  DISTRIBUTOR
+}
+
+enum CustomerStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+enum ChallanStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+// ─── User ───────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  stockMovements StockMovement[]
+  challans       Challan[]
+
+  @@map("users")
+}
+
+// ─── Customer ───────────────────────────────────────────────────────────────────
+
+model Customer {
+  id           String         @id @default(uuid())
+  name         String
+  mobile       String
+  email        String?
+  businessName String         @map("business_name")
+  gstNumber    String?        @map("gst_number")
+  customerType CustomerType   @map("customer_type")
+  address      String
+  status       CustomerStatus @default(LEAD)
+  followUpDate DateTime?      @map("follow_up_date")
+  notes        String?
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  challans Challan[]
+
+  @@index([name])
+  @@index([mobile])
+  @@index([businessName])
+  @@index([status])
+  @@index([customerType])
+  @@map("customers")
+}
+
+// ─── Product ────────────────────────────────────────────────────────────────────
+
+model Product {
+  id           String   @id @default(uuid())
+  name         String
+  sku          String   @unique
+  category     String
+  unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
+  currentStock Int      @default(0) @map("current_stock")
+  minimumStock Int      @default(0) @map("minimum_stock")
+  warehouse    String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  stockMovements StockMovement[]
+  challanItems   ChallanItem[]
+
+  @@index([category])
+  @@index([warehouse])
+  @@map("products")
+}
+
+// ─── StockMovement ──────────────────────────────────────────────────────────────
+
+model StockMovement {
+  id        String       @id @default(uuid())
+  productId String       @map("product_id")
+  quantity  Int
+  type      MovementType
+  reason    String
+  createdBy String       @map("created_by")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  // Relations – Restrict delete to preserve history
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([type])
+  @@map("stock_movements")
+}
+
+// ─── Challan ────────────────────────────────────────────────────────────────────
+
+model Challan {
+  id            String        @id @default(uuid())
+  challanNumber String        @unique @map("challan_number")
+  customerId    String        @map("customer_id")
+  status        ChallanStatus @default(DRAFT)
+  createdBy     String        @map("created_by")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations – Restrict delete to preserve business history
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  // Children
+  items ChallanItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("challans")
+}
+
+// ─── ChallanItem ────────────────────────────────────────────────────────────────
+// Stores product snapshot data so historical challans remain accurate even if
+// the product name or price changes later.
+
+model ChallanItem {
+  id                  String  @id @default(uuid())
+  challanId           String  @map("challan_id")
+  productId           String  @map("product_id")
+  productNameSnapshot String  @map("product_name_snapshot")
+  skuSnapshot         String  @map("sku_snapshot")
+  unitPriceSnapshot   Decimal @map("unit_price_snapshot") @db.Decimal(12, 2)
+  quantity            Int
+
+  // Relations – Restrict delete to preserve challan history
+  challan Challan @relation(fields: [challanId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  // Prevent duplicate product lines within the same challan
+  @@unique([challanId, productId])
+  @@index([challanId])
+  @@index([productId])
+  @@map("challan_items")
+}

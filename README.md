@@ -4,7 +4,7 @@ A lightweight, full-stack Mini ERP and CRM Operations Portal built for wholesale
 
 ---
 
-## 🏗️ Monorepo Structure
+## Monorepo Structure
 
 ```text
 /backend          - Node.js + Express + TypeScript + Prisma ORM + Zod + JWT API
@@ -14,7 +14,7 @@ README.md         - Monorepo documentation & setup instructions
 
 ---
 
-## 🛠️ Tech Stack Overview
+## Tech Stack
 
 ### Backend
 - **Node.js** & **Express.js** (REST API)
@@ -26,70 +26,158 @@ README.md         - Monorepo documentation & setup instructions
 ### Frontend
 - **React 18** + **Vite**
 - **TypeScript**
-- **Tailwind CSS** (Admin Portal styling)
-- **React Router**
-- **Axios** (API HTTP Client)
-- **Lucide React** (Iconography)
+- **Tailwind CSS**
+- **React Router** & **Axios**
 
 ---
 
-## 🚀 Quickstart & Local Setup
+## Local Setup
 
 ### Prerequisites
-- **Node.js** (v18 or higher recommended, tested on v22.x)
-- **NPM** (v9+ or v10+)
-- **PostgreSQL** instance (Local or Supabase/Neon)
+- **Node.js** v18+ (tested on v22.x)
+- **npm** v9+
+- **PostgreSQL** 14+ running locally (or a remote PostgreSQL connection string)
 
 ---
 
-### Step 1: Backend Setup
+### 1. Backend Setup
 
 ```bash
 cd backend
 npm install
 ```
 
-1. Create a `.env` file in `/backend` (or copy from `.env.example`):
-   ```env
-   PORT=5000
-   NODE_ENV=development
-   JWT_SECRET=super-secret-jwt-key-change-in-production
-   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minierp_db?schema=public"
-   ```
+Create `backend/.env` (copy from `.env.example`):
 
-2. Start the Backend Development Server:
-   ```bash
-   npm run dev
-   ```
-   * The API server will start at `http://localhost:5000`
-   * Health Check Endpoint: `http://localhost:5000/api/health`
+```env
+PORT=5000
+NODE_ENV=development
+JWT_SECRET=replace-with-a-long-random-secret
+DATABASE_URL="postgresql://YOUR_USER:YOUR_PASSWORD@localhost:5432/minierp_db?schema=public"
+```
 
 ---
 
-### Step 2: Frontend Setup
+### 2. Database Setup (Prisma + PostgreSQL)
 
-Open a new terminal window:
+**Run migrations** (creates the database and all tables):
+
+```bash
+cd backend
+npx prisma migrate dev
+```
+
+**Seed development data** (users, customers, products, stock movements):
+
+```bash
+npx prisma db seed
+```
+
+**Regenerate Prisma Client** (needed if schema changes occur):
+
+```bash
+npx prisma generate
+```
+
+**Reset the database** (drops all data, re-runs migrations and seed):
+
+```bash
+npx prisma migrate reset
+```
+
+**Browse data visually** (opens Prisma Studio in browser):
+
+```bash
+npx prisma studio
+```
+
+---
+
+### 3. Start the Backend
+
+```bash
+cd backend
+npm run dev
+```
+
+Server runs at `http://localhost:5000`. Health check: `GET /api/health`.
+
+---
+
+### 4. Frontend Setup
 
 ```bash
 cd frontend
 npm install
+npm run dev
 ```
 
-1. Create a `.env` file in `/frontend` (or copy from `.env.example`):
-   ```env
-   VITE_API_BASE_URL=http://localhost:5000/api
-   ```
-
-2. Start the Frontend Development Server:
-   ```bash
-   npm run dev
-   ```
-   * The application shell will be accessible at `http://localhost:5173`
+Frontend runs at `http://localhost:5173`.
 
 ---
 
-## 📡 API Endpoints (Current Implementation)
+## Database Schema
 
-| Method | Endpoint | Description | Status |
-|---|---|---|---|
-| `GET` | `/api/health` | Returns server health status, uptime, environment | ✅ Operational |
+### Entity Relationship Overview
+
+```text
+User
+├── StockMovement[]   (createdBy -> User)
+└── Challan[]         (createdBy -> User)
+
+Customer
+└── Challan[]         (customerId -> Customer)
+
+Product
+├── StockMovement[]   (productId -> Product)
+└── ChallanItem[]     (productId -> Product)
+
+Challan
+└── ChallanItem[]     (challanId -> Challan)
+```
+
+### Models
+
+| Model | Table | Key Fields |
+|---|---|---|
+| User | `users` | id, name, email (unique), passwordHash, role |
+| Customer | `customers` | id, name, mobile, businessName, customerType, status |
+| Product | `products` | id, name, sku (unique), unitPrice, currentStock, minimumStock |
+| StockMovement | `stock_movements` | id, productId, quantity, type (IN/OUT), reason, createdBy |
+| Challan | `challans` | id, challanNumber (unique), customerId, status, createdBy |
+| ChallanItem | `challan_items` | id, challanId, productId, snapshot fields, quantity |
+
+### Enums
+
+| Enum | Values |
+|---|---|
+| Role | ADMIN, SALES, WAREHOUSE, ACCOUNTS |
+| CustomerType | RETAIL, WHOLESALE, DISTRIBUTOR |
+| CustomerStatus | LEAD, ACTIVE, INACTIVE |
+| MovementType | IN, OUT |
+| ChallanStatus | DRAFT, CONFIRMED, CANCELLED |
+
+### Delete and History Policy
+
+All foreign keys use `onDelete: Restrict` (except ChallanItem -> Challan which uses Cascade). This prevents accidental deletion of historical business records. Application-level deactivation or archiving is preferred over destructive deletion.
+
+---
+
+## Development Seed Credentials
+
+> **WARNING:** DEVELOPMENT ONLY — Do NOT use these credentials in production environments.
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | admin@minierp.dev | Password@123 |
+| Sales | rahul@minierp.dev | Password@123 |
+| Warehouse | priya@minierp.dev | Password@123 |
+| Accounts | amit@minierp.dev | Password@123 |
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Server health and database connectivity status |

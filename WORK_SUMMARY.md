@@ -1,76 +1,112 @@
-# Mini ERP + CRM Operations Portal - Step 1 Completion Summary
+# Mini ERP + CRM Operations Portal — Work Summary
 
-**Project:** Full Stack Developer Case Study - Mini ERP + CRM Operations Portal  
+**Project:** Full Stack Developer Case Study  
 **Date:** August 11, 2026  
-**Status:** Step 1 Completed & Verified  
 
 ---
 
-## 📋 Overview of Work Completed
+## Step 1 — Project Initialization (Complete)
 
-### 1. Workspace Inspection & Structure Initialization
-- Inspected workspace (`d:\Fundsroom Case Study`).
-- Initialized a monorepo structure separating frontend and backend cleanly:
-  - `/backend`: Node.js, Express, TypeScript REST API
-  - `/frontend`: React, Vite, TypeScript, Tailwind CSS Admin Portal Shell
-
----
-
-### 2. Backend Infrastructure Setup (`/backend`)
-- **Package Management & Dependencies**:
-  - Main: `express`, `cors`, `dotenv`, `zod`, `jsonwebtoken`, `bcryptjs`, `@prisma/client`
-  - Dev: `typescript`, `tsx`, `prisma`, `@types/express`, `@types/cors`, `@types/node`, `@types/jsonwebtoken`, `@types/bcryptjs`
-- **TypeScript Configuration**:
-  - Target `ES2022`, `CommonJS` module resolution, strict mode enabled (`tsconfig.json`).
-- **Environment Management**:
-  - Created `.env` and `.env.example` defining `PORT`, `NODE_ENV`, `JWT_SECRET`, and `DATABASE_URL`.
-- **Express Architecture**:
-  - `src/config/env.ts`: Strongly typed environment variable loader using `dotenv`.
-  - `src/controllers/health.controller.ts`: Controller returning system status, timestamp, uptime, and environment.
-  - `src/routes/health.routes.ts`: Health check route mounting `GET /api/health`.
-  - `src/app.ts`: Express application setup with CORS middleware, JSON body parsing, centralized 404 handler, and global error handling middleware.
-  - `src/index.ts`: HTTP server listener on port 5000.
+- Monorepo structure: `/backend` + `/frontend`
+- Backend: Express + TypeScript + `GET /api/health`
+- Frontend: React + Vite + Tailwind CSS admin shell
+- Environment variables, `.gitignore`, README
+- Both servers verified running
 
 ---
 
-### 3. Frontend Portal Shell Setup (`/frontend`)
-- **Package Management & Dependencies**:
-  - Main: `react`, `react-dom`, `react-router-dom`, `axios`, `lucide-react`
-  - Dev: `vite`, `typescript`, `tailwindcss`, `postcss`, `autoprefixer`, `@vitejs/plugin-react`
-- **Configuration & Build Pipeline**:
-  - `vite.config.ts`: Configured dev server on port `5173` with proxy forwarding `/api` requests to backend (`http://localhost:5000`).
-  - `tailwind.config.js` & `postcss.config.js`: Integrated Tailwind CSS styling system.
-  - `src/index.css`: Added `@tailwind` directives and dark-mode base styles.
-  - `src/vite-env.d.ts`: Created TypeScript ambient declarations for Vite environment variables (`import.meta.env`).
-  - `.env` & `.env.example`: Set `VITE_API_BASE_URL=http://localhost:5000/api`.
-- **User Interface Shell (`src/App.tsx`)**:
-  - Built a responsive dark-themed admin layout with a sidebar menu (Dashboard, Customer CRM, Products & Stock, Sales Challans).
-  - Integrated dynamic status polling to ping `GET /api/health` via Axios to verify real-time frontend-backend connectivity.
+## Step 2 — Database Design, Prisma, Migrations & Seed Data (Complete)
 
----
+### Files Created / Modified
 
-### 4. Root Documentation (`README.md`)
-- Created a comprehensive `README.md` at project root covering:
-  - Architecture overview.
-  - Prerequisites.
-  - Step-by-step instructions to run backend and frontend locally.
-  - Environment variables documentation.
-  - API endpoint table.
+| File | Action |
+|---|---|
+| `backend/prisma/schema.prisma` | **Created** — Full ERP schema (6 models, 5 enums) |
+| `backend/prisma/seed.ts` | **Created** — Professional seed script with bcrypt |
+| `backend/prisma/migrations/` | **Created** — `init_erp_crm_schema` migration |
+| `backend/src/config/prisma.ts` | **Created** — Singleton PrismaClient |
+| `backend/src/controllers/health.controller.ts` | **Modified** — Added database connectivity check |
+| `backend/src/index.ts` | **Modified** — Added graceful Prisma shutdown |
+| `backend/package.json` | **Modified** — Added Prisma scripts + seed config |
+| `backend/.env.example` | **Modified** — Updated with placeholder format |
+| `README.md` | **Modified** — Added database docs, schema, seed credentials |
 
----
+### Prisma Models (6)
 
-### 5. Verification & Testing Completed
-- **Backend Compilation**: Successfully compiled via `tsc`.
-- **Backend Runtime & API Verification**: Started server on port 5000 and verified response from `http://localhost:5000/api/health`.
-- **Frontend Compilation**: Built production bundle with `vite build` cleanly.
-- **Frontend Runtime Verification**: Started dev server on port 5173 and confirmed frontend shell loads and communicates with backend.
+| Model | Table | Key Design Decisions |
+|---|---|---|
+| **User** | `users` | UUID PK, email unique, passwordHash stored (never plaintext) |
+| **Customer** | `customers` | Optional email/gstNumber/followUpDate/notes. 5 indexes for search |
+| **Product** | `products` | SKU unique, Decimal(12,2) for unitPrice, integer stock fields |
+| **StockMovement** | `stock_movements` | Positive quantity, type determines IN/OUT, Restrict on delete |
+| **Challan** | `challans` | challanNumber unique, Restrict delete for customer/user FK |
+| **ChallanItem** | `challan_items` | Product snapshot fields, composite unique (challanId + productId) |
 
----
+### Enums (5)
 
-## 🛠️ Quick Commands Reference
+`Role`, `CustomerType`, `CustomerStatus`, `MovementType`, `ChallanStatus`
 
-| Service | Directory | Command | URL |
-|---|---|---|---|
-| Backend Server | `cd backend` | `npm run dev` | `http://localhost:5000` |
-| Health API | `cd backend` | `curl http://localhost:5000/api/health` | `http://localhost:5000/api/health` |
-| Frontend Portal | `cd frontend` | `npm run dev` | `http://localhost:5173` |
+### Relationship Summary
+
+```text
+User --> StockMovement (createdBy, onDelete: Restrict)
+User --> Challan (createdBy, onDelete: Restrict)
+Customer --> Challan (customerId, onDelete: Restrict)
+Product --> StockMovement (productId, onDelete: Restrict)
+Product --> ChallanItem (productId, onDelete: Restrict)
+Challan --> ChallanItem (challanId, onDelete: Cascade)
+```
+
+### Important Constraints
+
+- `users.email` — UNIQUE
+- `products.sku` — UNIQUE
+- `challans.challan_number` — UNIQUE
+- `challan_items.(challan_id, product_id)` — COMPOSITE UNIQUE
+- All FK relations use `onDelete: Restrict` except ChallanItem -> Challan (Cascade)
+- Monetary values use `Decimal(12,2)`, never float
+
+### Indexes (19 total)
+
+- **User**: email (unique)
+- **Customer**: name, mobile, businessName, status, customerType
+- **Product**: sku (unique), category, warehouse
+- **StockMovement**: productId, createdBy, createdAt, type
+- **Challan**: challanNumber (unique), customerId, status, createdBy, createdAt
+- **ChallanItem**: challanId, productId, composite unique
+
+### Migration
+
+- Name: `20260811075146_init_erp_crm_schema`
+- Status: Applied successfully
+- Creates 5 enums, 6 tables, 19 indexes, 6 foreign keys
+
+### Seed Data Summary
+
+| Entity | Count | Details |
+|---|---|---|
+| Users | 4 | 1 ADMIN, 1 SALES, 1 WAREHOUSE, 1 ACCOUNTS (bcrypt hashed) |
+| Customers | 5 | 2 WHOLESALE, 2 RETAIL, 1 DISTRIBUTOR. Mix of ACTIVE/LEAD/INACTIVE |
+| Products | 8 | 4 categories. 2 low-stock items (Mustard Oil 8/20, Chana Dal 3/15) |
+| Stock Movements | 16 | 8 IN + 8 OUT. Net movements match product currentStock values |
+| Challans | 0 | None seeded (will be created through challan API in Step 4) |
+
+### Verification Commands Executed
+
+| Command | Result |
+|---|---|
+| `npx prisma format` | Schema formatted |
+| `npx prisma validate` | Schema valid |
+| `npx prisma generate` | Client generated |
+| `npx prisma migrate dev --name init_erp_crm_schema` | Migration applied, seed ran |
+| `npx tsc --noEmit` | TypeScript compiles cleanly |
+| `GET /api/health` | Returns `"database":"connected"` |
+| Verification script | All 4 users, 5 customers, 8 products, 16 movements confirmed |
+
+### Design Decisions for Future Steps
+
+1. **ChallanItem snapshot fields** — When creating a challan, copy `product.name`, `product.sku`, `product.unitPrice` into snapshot fields. Do NOT rely solely on productId for display.
+2. **Stock deduction** — Must be done in a transaction when confirming a challan. Check `currentStock >= requestedQuantity` before deducting.
+3. **Challan numbering** — `challanNumber` is unique but generation logic is not yet implemented. Suggest format like `CH-YYYYMMDD-XXXX`.
+4. **User passwords** — Stored as bcrypt hashes. Login endpoint will need `bcrypt.compare()`.
+5. **Delete protection** — All Restrict FKs mean the app layer should deactivate/archive instead of deleting records with dependencies.
