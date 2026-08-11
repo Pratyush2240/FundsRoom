@@ -3,6 +3,8 @@ import cors, { CorsOptions } from 'cors';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import customerRoutes from './routes/customer.routes';
+import productRoutes from './routes/product.routes';
+import inventoryRoutes from './routes/inventory.routes';
 import { env } from './config/env';
 
 const app = express();
@@ -26,6 +28,8 @@ app.use(express.json());
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Centralized 404 handler
 app.use((req: Request, res: Response) => {
